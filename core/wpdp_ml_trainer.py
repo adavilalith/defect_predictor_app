@@ -95,9 +95,11 @@ def apply_feature_selection(X_train, X_test, y_train, config):
             raise FileNotFoundError(f"Feature list CSV not found at: {config['fs_csv_path']}")
         
         feature_df = pd.read_csv(config['fs_csv_path'], header=None)
-        selected_features = feature_df.iloc[:, 0].tolist()
-        
+        selected_features = feature_df.iloc[1:,0].tolist()
+        selected_features = [f.upper() for f in selected_features]
+
         final_features = [f for f in selected_features if f in X_train.columns]
+
         if not final_features:
             raise ValueError("CSV Filter resulted in zero matching features.")
 

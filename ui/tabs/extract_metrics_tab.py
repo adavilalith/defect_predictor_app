@@ -74,8 +74,8 @@ class ExtractMetricsTab(QWidget):
         self.tabs.addTab(self.graphbert_tab, "GraphBERT Based Feature Extraction")
 
         # 2.5 Code T5 Based Feature Extraction (Placeholder)
-        self.codet5_tab = CodeT5SubTab()
-        self.tabs.addTab(self.codet5_tab, "Code T5 Based Feature Extraction")
+        # self.codet5_tab = CodeT5SubTab()
+        # self.tabs.addTab(self.codet5_tab, "Code T5 Based Feature Extraction")
 
         vbox.addWidget(self.tabs)
         self.setLayout(vbox)

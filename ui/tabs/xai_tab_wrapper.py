@@ -1,26 +1,7 @@
 from PyQt5.QtWidgets import QWidget, QTabWidget, QVBoxLayout, QLabel
 from PyQt5.QtCore import Qt
-
-# ----------------------------------------------------------------------
-# Helper placeholders for the XAI Scenario Sub-pages
-# ----------------------------------------------------------------------
-
-# Placeholder for ui/tabs/subtabs/xai_scenarios/within_version_xai.py
-class WithinVersionXAI(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setStyleSheet("background-color: #fce4ec; border: 1px solid #ec407a;")
-        l = QVBoxLayout(self)
-        l.addWidget(QLabel("XAI SCENARIO: With Version Within Project", alignment=Qt.AlignCenter))
-
-# Placeholder for ui/tabs/subtabs/xai_scenarios/cross_version_xai.py
-class CrossVersionXAI(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setStyleSheet("background-color: #e1f5fe; border: 1px solid #29b6f6;")
-        l = QVBoxLayout(self)
-        l.addWidget(QLabel("XAI SCENARIO: Cross Version Cross Project", alignment=Qt.AlignCenter))
-
+from ui.tabs.subtabs.xai.within_version_xai import WithinVersionXAI
+from ui.tabs.subtabs.xai.cross_version_xai import CrossVersionXAI
 # ----------------------------------------------------------------------
 # Main XAI Wrapper Class
 # ----------------------------------------------------------------------
