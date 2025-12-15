@@ -118,6 +118,7 @@ class MetricsExtractionSubTab(QWidget):
         vbox.addWidget(self.progress_bar)
         
         vbox.addWidget(self.scroll_area) 
+        vbox.addStretch(0) 
         
         self.setLayout(vbox)
         

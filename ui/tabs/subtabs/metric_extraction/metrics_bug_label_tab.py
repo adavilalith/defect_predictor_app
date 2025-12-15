@@ -4,29 +4,24 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
     QLineEdit, QFileDialog, QProgressBar, 
     QMessageBox, QScrollArea, QTableWidget, QTableWidgetItem,
-    QSizePolicy
+    QSizePolicy, QFormLayout, QLabel
 )
 from PyQt5.QtCore import (
     pyqtSignal, QObject, QRunnable, QThreadPool, Qt
 )
 
-# Import the new end-to-end logic
+# NOTE: The imports below are assumed to exist in your environment.
 from core.extract_add_bug import extract_metrics_and_add_bug_label 
 
-# --- 1. Worker Signals Class (Reused) ---
+from ui.components.csv_analytics_dialog import CSVAnalyticsDialog
+
+# --- Worker Signals and Worker Classes (Unchanged from previous response) ---
 class WorkerSignals(QObject):
-    """Defines the signals available from a running worker thread."""
     finished = pyqtSignal(pd.DataFrame)
     error = pyqtSignal(str)
     progress = pyqtSignal(float)
 
-
-# --- 2. Data Labeling Worker Class (Updated to use the core function) ---
 class BugLabelingWorker(QRunnable):
-    """
-    Worker thread to delegate the entire data preparation process 
-    to the core extract_metrics_and_add_bug_label function.
-    """
     def __init__(self, source_folder, bug_report_csv, output_csv, bug_function_name):
         super().__init__()
         self.source_folder = source_folder
@@ -36,9 +31,7 @@ class BugLabelingWorker(QRunnable):
         self.signals = WorkerSignals()
 
     def run(self):
-        """Runs the extraction and labeling process."""
         try:
-            # Delegate all complex steps to the core function
             df_metrics = extract_metrics_and_add_bug_label(
                 source_folder=self.source_folder,
                 bug_report_csv=self.bug_report_csv,
@@ -46,122 +39,153 @@ class BugLabelingWorker(QRunnable):
                 bug_function_name_col=self.bug_function_name,
                 progress_callback=lambda p: self.signals.progress.emit(p)
             )
-            
             self.signals.finished.emit(df_metrics)
-            
         except Exception as e:
-            # Catch the exception raised by the core function
             self.signals.error.emit(f"Data Preparation Error: {str(e)}")
 
 
-# --- 3. Data Preparation UI Tab ---
+# --- 3. Data Preparation UI Tab (UPDATED) ---
 class MetricsBugLabelSubTab(QWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
         self.threadpool = QThreadPool()
         self.df_result = None
         self.init_ui()
 
     def init_ui(self):
-        # --- Widgets ---
+        vbox = QVBoxLayout(self)
+        vbox.setSpacing(10)
+        
+        # Style for the Analytics Button
+        analytics_btn_style = """
+            QPushButton {
+                background-color: #2196F3; 
+                color: white; 
+                padding: 4px; 
+                font-weight: bold;
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background-color: #1976D2;
+            }
+        """
+
+        input_form = QFormLayout()
+
+        # 1. Source Folder Input (No Analytics button needed here, as it's a folder)
         self.folder_input = QLineEdit()
-        self.folder_input.setPlaceholderText("1. Select C/C++ Source Code Folder...")
-        self.browse_folder_btn = QPushButton("Source Folder")
+        self.folder_input.setPlaceholderText("e.g., /project/src")
+        self.browse_folder_btn = QPushButton("Browse Folder")
+        self.browse_folder_btn.clicked.connect(self.select_source_folder)
         
+        h_folder = QHBoxLayout()
+        h_folder.addWidget(self.folder_input)
+        h_folder.addWidget(self.browse_folder_btn)
+        input_form.addRow(QLabel("Source Code Folder:"), h_folder)
+        
+        # 2. Bug Report CSV Input (ANALYTICS BUTTON ADDED)
         self.bug_report_input = QLineEdit()
-        self.bug_report_input.setPlaceholderText("2. Select Bug Report CSV File (e.g., function list)...")
-        self.browse_bug_btn = QPushButton("Bug CSV")
+        self.bug_report_input.setPlaceholderText("e.g., /data/bugs.csv")
+        self.browse_bug_btn = QPushButton("Browse CSV")
+        self.browse_bug_btn.clicked.connect(self.select_bug_report_file)
         
+        analytics_btn_bug = QPushButton("View Analytics")
+        analytics_btn_bug.setStyleSheet(analytics_btn_style)
+        # Connect to the new handler method
+        analytics_btn_bug.clicked.connect(lambda: self.prompt_show_analytics(self.bug_report_input))
+        
+        h_bug = QHBoxLayout()
+        h_bug.addWidget(self.bug_report_input)
+        h_bug.addWidget(self.browse_bug_btn)
+        h_bug.addWidget(analytics_btn_bug) # Add the analytics button
+        input_form.addRow(QLabel("Bug Report CSV File:"), h_bug)
+        
+        # 3. Bug Function Name Column
         self.bug_function_name_input = QLineEdit()
-        self.bug_function_name_input.setPlaceholderText("3. Enter Function Name Column in Bug CSV (optional)")
+        self.bug_function_name_input.setPlaceholderText("e.g., 'Function_Name' (Column in Bug CSV)")
+        input_form.addRow(QLabel("Bug Name Column:"), self.bug_function_name_input)
         
+        # 4. Output Selection (ANALYTICS BUTTON ADDED)
         self.output_input = QLineEdit()
-        self.output_input.setPlaceholderText("4. Select Output Labeled CSV File Path...")
+        self.output_input.setPlaceholderText("e.g., /output/labeled_metrics.csv")
         self.browse_output_btn = QPushButton("Save Output")
+        self.browse_output_btn.clicked.connect(self.select_output_file)
         
-        self.label_btn = QPushButton("Run Data Preparation (Extract & Label)")
-        self.label_btn.setStyleSheet("background-color: #007ACC; color: white; font-weight: bold;")
+        analytics_btn_output = QPushButton("View Analytics")
+        analytics_btn_output.setStyleSheet(analytics_btn_style)
+        # Connect to the new handler method
+        analytics_btn_output.clicked.connect(lambda: self.prompt_show_analytics(self.output_input))
+        
+        h_output = QHBoxLayout()
+        h_output.addWidget(self.output_input)
+        h_output.addWidget(self.browse_output_btn)
+        h_output.addWidget(analytics_btn_output) # Add the analytics button
+        input_form.addRow(QLabel("Output Labeled CSV:"), h_output)
+
+        vbox.addLayout(input_form)
+        
+        # --- Run Button & Progress (Unchanged) ---
+        self.label_btn = QPushButton("Run Data Preparation (Extract Metrics & Add Bug Label)")
+        self.label_btn.setStyleSheet("background-color: #007ACC; color: white; font-weight: bold; padding: 10px;")
+        self.label_btn.clicked.connect(self.start_labeling)
+        vbox.addWidget(self.label_btn)
         
         self.progress_bar = QProgressBar()
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
+        vbox.addWidget(self.progress_bar)
         
-        # --- Scrollable Results Table Setup ---
+        # --- Scrollable Results Table Setup (Unchanged) ---
         self.results_table = QTableWidget()
+        self.results_table.setWordWrap(False)
         self.results_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-        self.results_table.setSizePolicy(
-            QSizePolicy.Expanding, 
-            QSizePolicy.Expanding
-        )
+        self.results_table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setWidget(self.results_table)
         self.scroll_area.setVisible(False)
         
-        # --- Layouts ---
-        vbox = QVBoxLayout()
-        vbox.setSpacing(10)
-        
-        # 1. Source Folder
-        h_folder = QHBoxLayout()
-        h_folder.addWidget(self.folder_input)
-        h_folder.addWidget(self.browse_folder_btn)
-        vbox.addLayout(h_folder)
-        
-        # 2. Bug Report CSV
-        h_bug = QHBoxLayout()
-        h_bug.addWidget(self.bug_report_input)
-        h_bug.addWidget(self.browse_bug_btn)
-        vbox.addLayout(h_bug)
-        
-        # 3. Bug Function Name Column
-        vbox.addWidget(self.bug_function_name_input)
-        
-        # 4. Output Selection
-        h_output = QHBoxLayout()
-        h_output.addWidget(self.output_input)
-        h_output.addWidget(self.browse_output_btn)
-        vbox.addLayout(h_output)
-        
-        vbox.addWidget(self.label_btn)
-        vbox.addWidget(self.progress_bar)
-        
-        # The scroll area fills all remaining space
         vbox.addWidget(self.scroll_area) 
-
-        # Add a stretch at the end to ensure all content is pushed to the top when the scroll area is hidden
         vbox.addStretch(1) 
 
-        self.setLayout(vbox)
-        
-        # --- Signals and Slots ---
-        self.browse_folder_btn.clicked.connect(self.select_source_folder)
-        self.browse_bug_btn.clicked.connect(self.select_bug_report_file)
-        self.browse_output_btn.clicked.connect(self.select_output_file)
-        self.label_btn.clicked.connect(self.start_labeling)
-        
         self.set_ui_state(True)
         
+    # --- New Analytics Helper Method ---
+
+
+    def prompt_show_analytics(self, line_edit_widget: QLineEdit):
+        """
+        Handles the click for 'View Analytics' button. 
+        It checks the path and then calls a method (which should launch a dialog).
+        """
+        csv_path = line_edit_widget.text().strip()
+        if csv_path and os.path.exists(csv_path):
+            analytics_dialog = CSVAnalyticsDialog(csv_path, self)
+            analytics_dialog.exec_()
+        else:
+            QMessageBox.warning(self, "Warning", "Please select a valid CSV file first.")
+
+    # --- Other Methods (Unchanged: set_ui_state, select_*, start_labeling, update_progress, etc.) ---
     def set_ui_state(self, enabled):
         """Enables/disables UI elements during processing."""
-        self.folder_input.setEnabled(enabled)
-        self.browse_folder_btn.setEnabled(enabled)
-        self.bug_report_input.setEnabled(enabled)
-        self.browse_bug_btn.setEnabled(enabled)
-        self.bug_function_name_input.setEnabled(enabled)
-        self.output_input.setEnabled(enabled)
-        self.browse_output_btn.setEnabled(enabled)
+        widgets = [
+            self.folder_input, self.browse_folder_btn,
+            self.bug_report_input, self.browse_bug_btn,
+            self.bug_function_name_input,
+            self.output_input, self.browse_output_btn
+        ]
+        for w in widgets:
+            w.setEnabled(enabled)
+            
         self.label_btn.setEnabled(enabled)
         if enabled:
-            self.label_btn.setText("Run Data Preparation (Extract & Label)")
-            self.label_btn.setStyleSheet("background-color: #007ACC; color: white; font-weight: bold;")
+            self.label_btn.setText("Run Data Preparation (Extract Metrics & Add Bug Label)")
+            self.label_btn.setStyleSheet("background-color: #007ACC; color: white; font-weight: bold; padding: 10px;")
         else:
-            self.label_btn.setText("Processing...")
-            self.label_btn.setStyleSheet("background-color: #FFC107; color: black;")
+            self.label_btn.setText("Processing... Please wait for extraction and labeling to complete.")
+            self.label_btn.setStyleSheet("background-color: #FFC107; color: black; padding: 10px;")
 
-    # --- File Dialog Handlers ---
     def select_source_folder(self):
         folder_path = QFileDialog.getExistingDirectory(
             self, "Select C/C++ Source Code Folder", os.getcwd()
@@ -183,14 +207,12 @@ class MetricsBugLabelSubTab(QWidget):
         if file_path:
             self.output_input.setText(file_path)
 
-    # --- Worker Thread Management ---
     def start_labeling(self):
-        """Initiates the data preparation process in a worker thread."""
-        source_folder = self.folder_input.text()
-        bug_report_csv = self.bug_report_input.text()
-        output_csv = self.output_input.text()
-        bug_function_name = self.bug_function_name_input.text()
-
+        source_folder = self.folder_input.text().strip()
+        bug_report_csv = self.bug_report_input.text().strip()
+        output_csv = self.output_input.text().strip()
+        bug_function_name = self.bug_function_name_input.text().strip()
+        
         if not source_folder or not os.path.isdir(source_folder):
             QMessageBox.warning(self, "Invalid Input", "Please select a valid source code folder.")
             return
@@ -214,34 +236,31 @@ class MetricsBugLabelSubTab(QWidget):
         
         self.threadpool.start(worker)
 
-    # --- Slot Handlers for Worker Signals ---
     def update_progress(self, percent):
-        """Updates the progress bar (runs on main GUI thread)."""
         self.progress_bar.setValue(int(percent))
 
     def labeling_finished(self, df):
-        """Handles successful completion (runs on main GUI thread)."""
         self.df_result = df
         self.progress_bar.setValue(100)
         self.set_ui_state(True)
         self.preview_results(df)
         
-        QMessageBox.information(self, "Success", f"Data preparation and saving completed successfully! Saved to {self.output_input.text()}")
+        QMessageBox.information(
+            self, 
+            "Success", 
+            f"Data preparation and saving completed successfully! Saved to:\n{self.output_input.text()}"
+        )
 
     def labeling_error(self, message):
-        """Handles errors (runs on main GUI thread)."""
         self.progress_bar.setValue(0)
         self.set_ui_state(True)
         QMessageBox.critical(self, "Data Preparation Error", message)
 
-    # --- Result Display ---
     def preview_results(self, df):
-        """Displays a preview of the resulting DataFrame in the QTableWidget."""
         if df is None or df.empty:
             self.scroll_area.setVisible(False)
             return
 
-        # Show the first 50 rows, as before
         df_preview = df.head(50)
         display_columns = list(df_preview.columns)
         

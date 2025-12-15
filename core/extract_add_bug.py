@@ -1,31 +1,8 @@
 import pandas as pd
 import os
-# Assuming the MetricsExtractor is available for extraction
-# and the labeling_logic is available for bug assignment
 from core.labeling_logic import add_bug_label 
-# NOTE: The actual MetricsExtractor needs to be imported or defined, 
-# here we assume it's available, likely from a parent module or environment.
-# Since I don't have the definition for MetricsExtractor, I will assume 
-# a conceptual one is available that defines a process_folder method.
+from core.metrics_extractor import MetricsExtractor
 
-# Mock import for demonstration if not available in the environment
-try:
-    from core.metrics_extractor import MetricsExtractor 
-except ImportError:
-    # Define a conceptual mock class for demonstration purposes
-    class MetricsExtractor:
-        def process_folder(self, source_folder, output_csv, progress_callback=None):
-            # In a real scenario, this would generate and return the metrics DataFrame
-            if progress_callback:
-                progress_callback(100)
-            # Returning a mock DataFrame that fulfills the requirements for add_bug_label
-            print(f"MOCK: Extracting metrics from {source_folder}")
-            return pd.DataFrame({
-                'File_Path': ['fileA.c', 'fileA.c', 'fileB.cpp', 'fileC.c'],
-                'Function_Name': ['func_a', 'buggy_func_1', 'func_b', 'func_c'],
-                'LOC': [100, 50, 200, 30],
-                'Cyclomatic_Complexity': [5, 10, 8, 2]
-            })
 
 
 def extract_metrics_and_add_bug_label(source_folder: str, bug_report_csv: str, 

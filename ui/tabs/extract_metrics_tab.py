@@ -5,16 +5,12 @@ from PyQt5.QtWidgets import (
 from core.metrics_extractor import initialize_clang_library # Function for one-time setup
 from ui.tabs.subtabs.metric_extraction.metrics_for_prediction_tab import MetricsExtractionSubTab
 from ui.tabs.subtabs.metric_extraction.metrics_bug_label_tab import MetricsBugLabelSubTab
+from ui.tabs.subtabs.metric_extraction.existing_metrics_bug_tab import UseExistingMetricsSubTab
+
 
 # --- Placeholder Classes for Future Sub-Tabs ---
 # These classes are temporary wrappers to allow the main tab structure to compile.
 # You will replace these with the actual implementation files later.
-
-class ExistingMetricsBugLabelSubTab(QWidget):
-    def __init__(self):
-        super().__init__()
-        layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("UI for 'Use Existing Metrics _Add Bug Label' to be implemented here."))
 
 class GraphBERTSubTab(QWidget):
     def __init__(self):
@@ -70,7 +66,7 @@ class ExtractMetricsTab(QWidget):
         self.tabs.addTab(self.bug_label_tab, "Extract Metrics _Add Bug Label")
         
         # 2.3 Use Existing Metrics _Add Bug Label (Placeholder)
-        self.existing_bug_label_tab = ExistingMetricsBugLabelSubTab()
+        self.existing_bug_label_tab = UseExistingMetricsSubTab()
         self.tabs.addTab(self.existing_bug_label_tab, "Use Existing Metrics _Add Bug Label")
 
         # 2.4 GraphBERT Based Feature Extraction (Placeholder)
