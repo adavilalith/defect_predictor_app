@@ -11,6 +11,7 @@ from PyQt5.QtWidgets import (
     QMainWindow, QTabWidget, QWidget, QVBoxLayout, QFileDialog, 
     QMessageBox, QApplication, QScrollArea, QAction
 )
+from PyQt5 import QtGui
 from PyQt5.QtCore import QEvent, QSettings
 from PyQt5.QtGui import QFont
 
@@ -26,7 +27,7 @@ class DefectPredictionUI(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Defect Prediction UI")
-
+        self.setWindowIcon(QtGui.QIcon('/home/lalith/drdl/defect_predictor_app/icon.jpg'))
         # Dynamic resizing and safety minimums
         screen = QApplication.primaryScreen().availableGeometry()
         width = int(screen.width() * 0.9)
@@ -150,7 +151,7 @@ class DefectPredictionUI(QMainWindow):
         self.tabs.addTab(CVWPWrapperTab(), "CVWP")
         
         # 4. CVCP Tab (Cross Version Cross Project)
-        self.tabs.addTab(CVCPWrapperTab(), "CVCP")
+        # self.tabs.addTab(CVCPWrapperTab(), "CVCP")
         
         # 5. Default Model Tab (Single page)
         self.tabs.addTab(DefaultModelTab(), "Default Model")

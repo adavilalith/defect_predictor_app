@@ -12,12 +12,13 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar 
 from matplotlib.figure import Figure
 import pandas as pd
+import csv
 import numpy as np
 import seaborn as sns
 from scipy import stats
 import os
 
-
+    
 class ZoomableCanvas(FigureCanvas):
     """Custom FigureCanvas with zoom functionality"""
     def __init__(self, figure, parent=None):
@@ -124,7 +125,7 @@ class CSVAnalyticsDialog(QDialog):
 
     def apply_dark_mode_style(self):
         """Apply dark mode styling using the external QSS file"""
-        stylesheet = self.load_stylesheet("darkMode.qss")
+        stylesheet = self.load_stylesheet("./styles/darkMode.qss")
         if stylesheet:
             self.setStyleSheet(stylesheet)
         
@@ -149,7 +150,7 @@ class CSVAnalyticsDialog(QDialog):
 
     def apply_light_mode_style(self):
         """Apply light mode styling using the external QSS file"""
-        stylesheet = self.load_stylesheet("lightMode.qss")
+        stylesheet = self.load_stylesheet("./styles/lightMode.qss")
         if stylesheet:
             self.setStyleSheet(stylesheet)
         
