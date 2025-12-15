@@ -1,3 +1,14 @@
+from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout
+from PyQt5.QtCore import Qt
+
+class PredictionScenarioCV(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setStyleSheet("background-color: #fff3e0; border: 1px dashed #ffb74d;")
+        layout = QVBoxLayout(self)
+        layout.addWidget(QLabel("CVWP/CVCP: Prediction Scenario (CV - SHARED LAYOUT)", alignment=Qt.AlignCenter))
+        layout.addWidget(QLabel("This layout is shared for Cross-Version and Cross-Project prediction.", alignment=Qt.AlignCenter))
+
 import os
 import json
 import pandas as pd
@@ -11,7 +22,6 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, QObject, QRunnable, QThreadPool, pyqtSignal
 from PyQt5.QtGui import QPixmap
 
-# NOTE: Assuming ui.components.csv_analytics_dialog is correctly imported
 from ui.components.csv_analytics_dialog import CSVAnalyticsDialog 
 
 # =========================================================================
@@ -129,11 +139,8 @@ class ModelPredictionWorker(QRunnable):
             self.signals.error.emit(f"Prediction Error: {type(e).__name__}: {str(e)}")
 
 
-# =========================================================================
-# === 4. UI INTEGRATION (PredictionScenarioWV) ============================
-# =========================================================================
 
-class PredictionScenarioWV(QWidget):
+class PredictionScenarioCV(QWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.threadpool = QThreadPool()

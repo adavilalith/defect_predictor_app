@@ -19,7 +19,7 @@ from PyQt5.QtGui import QFont
 from ui.tabs.extract_metrics_tab import ExtractMetricsTab
 from ui.tabs.wpdp_tab_wrapper import WPDPWrapperTab
 from ui.tabs.cvwp_tab_wrapper import CVWPWrapperTab # Renamed from CVDP
-from ui.tabs.cvcp_tab_wrapper import CVCPWrapperTab # Renamed from CPDP
+# from ui.tabs.cvcp_tab_wrapper import CVCPWrapperTab # Renamed from CPDP
 from ui.tabs.default_model_tab import DefaultModelTab
 from ui.tabs.xai_tab_wrapper import XAIWrapperTab
 

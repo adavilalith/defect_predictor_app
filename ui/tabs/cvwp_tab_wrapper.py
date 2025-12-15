@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QTabWidget, QVBoxLayout
-from ui.tabs.subtabs.shared_prediction_cv.test_scenario_cv import TestScenarioCV
-from ui.tabs.subtabs.shared_prediction_cv.prediction_scenario_cv import PredictionScenarioCV
+from ui.tabs.subtabs.CVWP.test_scenario_cv import TestScenarioCV
+from ui.tabs.subtabs.CVWP.prediction_scenario_cv import PredictionScenarioCV
 
 class CVWPWrapperTab(QWidget):
     def __init__(self, parent=None):
