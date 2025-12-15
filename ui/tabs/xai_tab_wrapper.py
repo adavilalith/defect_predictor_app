@@ -39,4 +39,4 @@ class XAIWrapperTab(QWidget):
         
         # Add the two XAI specific sub-tabs
         sub_tabs.addTab(WithinVersionXAI(), "With Version Within Project")
-        sub_tabs.addTab(CrossVersionXAI(), "Cross Version Cross Project")
+        sub_tabs.addTab(CrossVersionXAI(), "Cross Version Cross Project")   
