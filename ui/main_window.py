@@ -1,6 +1,6 @@
 import sys
 from pathlib import Path
-
+import os
 # Add project root to Python path (Ensures imports from 'ui.tabs' work)
 # This line is crucial for finding modules in ui/tabs/
 project_root = Path(__file__).parent.parent
@@ -27,7 +27,15 @@ class DefectPredictionUI(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Defect Prediction UI")
-        self.setWindowIcon(QtGui.QIcon('/home/lalith/drdl/defect_predictor_app/icon.jpg'))
+        # Get the directory of the current script
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        # Go up one level and find the icon
+        icon_path = os.path.normpath(os.path.join(current_dir, "..", "icon.png"))
+        print(icon_path)
+        if os.path.exists(icon_path):
+            self.setWindowIcon(QtGui.QIcon(icon_path))
+        else:
+            print("FILE NOT FOUND AT PATH!")
         # Dynamic resizing and safety minimums
         screen = QApplication.primaryScreen().availableGeometry()
         width = int(screen.width() * 0.9)
