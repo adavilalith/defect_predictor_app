@@ -23,6 +23,7 @@ from PyQt5.QtCore import Qt, QObject, QRunnable, QThreadPool, pyqtSignal
 from PyQt5.QtGui import QPixmap
 
 from ui.components.csv_analytics_dialog import CSVAnalyticsDialog 
+from ui.components.reset_mixin import ResetMixin 
 
 # =========================================================================
 # === 1. WDP-ML UTILITIES (LOADING ASSETS) ================================
@@ -140,7 +141,7 @@ class ModelPredictionWorker(QRunnable):
         except Exception as e:
             self.signals.error.emit(f"Prediction Error: {type(e).__name__}: {str(e)}")
             
-class PredictionScenarioCV(QWidget):
+class PredictionScenarioCV(QWidget, ResetMixin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.threadpool = QThreadPool()
@@ -227,7 +228,15 @@ class PredictionScenarioCV(QWidget):
         
         predict_group.setLayout(predict_form)
         vbox.addWidget(predict_group)
-        vbox.addWidget(self.predict_btn)
+        
+        # Button layout for predict and reset buttons
+        button_layout = QHBoxLayout()
+        button_layout.addWidget(self.predict_btn)
+        
+        # Add reset button beside predict button
+        self.setup_reset_button(button_layout)
+        
+        vbox.addLayout(button_layout)
 
         # --- D. Prediction Results ---
         self.results_group = QGroupBox("Prediction Results")
@@ -267,6 +276,12 @@ class PredictionScenarioCV(QWidget):
         self.browse_data_btn.setEnabled(enabled)
         self.output_file_input.setEnabled(enabled)
         self.browse_output_btn.setEnabled(enabled)
+        
+        # Control reset button state
+        if enabled:
+            self.enable_reset_button()
+        else:
+            self.disable_reset_button()
         
         # Only enable prediction button if a model summary is loaded
         if enabled and self.cm_plot_path:
@@ -472,3 +487,26 @@ class PredictionScenarioCV(QWidget):
             
         except Exception as e:
             QMessageBox.critical(self, "Analytics Error", f"Failed to load detailed analytics: {str(e)}")
+
+    def reset_to_defaults(self):
+        """Reset all parameters and input files to default values."""
+        # Clear input fields
+        self.model_dir_input.clear()
+        self.data_input.clear()
+        self.output_file_input.clear()
+        
+        # Reset model-related variables
+        self.cm_plot_path = None
+        
+        # Hide groups
+        self.summary_group.setVisible(False)
+        self.results_group.setVisible(False)
+        
+        # Clear displays
+        self.metrics_label.clear()
+        self.config_text.clear()
+        self.cm_plot_display.clear()
+        self.output_path_label.setText("Output CSV: N/A")
+        
+        # Reset UI state
+        self.set_ui_state(True)

@@ -9,9 +9,12 @@ class WPDPWrapperTab(QWidget):
         self.setObjectName("WPDPWrapperTab")
 
         layout = QVBoxLayout(self)
-        sub_tabs = QTabWidget()
-        layout.addWidget(sub_tabs)
+        self.sub_tabs = QTabWidget()
+        layout.addWidget(self.sub_tabs)
 
         # Uses the WV-specific pages
-        sub_tabs.addTab(TestScenarioWV(), "Test Scenario")
-        sub_tabs.addTab(PredictionScenarioWV(), "Prediction Scenario")
+        self.test_tab = TestScenarioWV()
+        self.prediction_tab = PredictionScenarioWV()
+        
+        self.sub_tabs.addTab(self.test_tab, "Test Scenario")
+        self.sub_tabs.addTab(self.prediction_tab, "Prediction Scenario")

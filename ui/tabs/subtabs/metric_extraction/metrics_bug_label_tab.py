@@ -14,6 +14,7 @@ from PyQt5.QtCore import (
 from core.extract_add_bug import extract_metrics_and_add_bug_label 
 
 from ui.components.csv_analytics_dialog import CSVAnalyticsDialog
+from ui.components.reset_mixin import ResetMixin
 
 # --- Worker Signals and Worker Classes (Unchanged from previous response) ---
 class WorkerSignals(QObject):
@@ -45,7 +46,7 @@ class BugLabelingWorker(QRunnable):
 
 
 # --- 3. Data Preparation UI Tab (UPDATED) ---
-class MetricsBugLabelSubTab(QWidget):
+class MetricsBugLabelSubTab(QWidget, ResetMixin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.threadpool = QThreadPool()
@@ -128,7 +129,15 @@ class MetricsBugLabelSubTab(QWidget):
         self.label_btn = QPushButton("Run Data Preparation (Extract Metrics & Add Bug Label)")
         self.label_btn.setStyleSheet("background-color: #007ACC; color: white; font-weight: bold; padding: 10px;")
         self.label_btn.clicked.connect(self.start_labeling)
-        vbox.addWidget(self.label_btn)
+        
+        # Button layout for label and reset buttons
+        button_layout = QHBoxLayout()
+        button_layout.addWidget(self.label_btn)
+        
+        # Add reset button beside label button
+        self.setup_reset_button(button_layout)
+        
+        vbox.addLayout(button_layout)
         
         self.progress_bar = QProgressBar()
         self.progress_bar.setRange(0, 100)
@@ -179,6 +188,13 @@ class MetricsBugLabelSubTab(QWidget):
             w.setEnabled(enabled)
             
         self.label_btn.setEnabled(enabled)
+        
+        # Control reset button state
+        if enabled:
+            self.enable_reset_button()
+        else:
+            self.disable_reset_button()
+            
         if enabled:
             self.label_btn.setText("Run Data Preparation (Extract Metrics & Add Bug Label)")
             self.label_btn.setStyleSheet("background-color: #007ACC; color: white; font-weight: bold; padding: 10px;")
@@ -282,3 +298,25 @@ class MetricsBugLabelSubTab(QWidget):
         
         self.results_table.resizeColumnsToContents()
         self.scroll_area.setVisible(True)
+
+    def reset_to_defaults(self):
+        """Reset all parameters and input files to default values."""
+        # Clear input fields
+        self.folder_input.clear()
+        self.bug_report_input.clear()
+        self.bug_function_name_input.clear()
+        self.output_input.clear()
+        
+        # Reset progress bar
+        self.progress_bar.setValue(0)
+        
+        # Clear results
+        self.df_result = None
+        self.results_table.setRowCount(0)
+        self.results_table.setColumnCount(0)
+        
+        # Hide results area
+        self.scroll_area.setVisible(False)
+        
+        # Reset UI state
+        self.set_ui_state(True)

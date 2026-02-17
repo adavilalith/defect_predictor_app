@@ -49,3 +49,5 @@ coverage.xml
 .idea/  # For PyCharm/IntelliJ
 .vscode/ # For VS Code
 *.swp
+.vscode
+Dataset/
