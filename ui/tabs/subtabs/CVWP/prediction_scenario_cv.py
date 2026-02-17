@@ -89,7 +89,7 @@ class ModelPredictionWorker(QRunnable):
             # 1. Load Assets (Model, Scaler, Features)
             self.signals.progress.emit("Loading model assets...")
             model = load_wpdp_model(self.model_dir)
-            scaler = load_wpdp_scaler(self.model_dir) # Can be None
+            scaler = load_wpdp_scaler(self.model_dir) 
             final_features = load_wpdp_features(self.model_dir)
             
             # 2. Load Unlabeled Data
@@ -99,30 +99,34 @@ class ModelPredictionWorker(QRunnable):
             if data_to_predict.empty:
                 raise ValueError("Input data is empty.")
 
-
+            # Remove metadata columns that shouldn't be scaled or fed to the model
             ignore_cols = ['function _name', 'filepath', 'commit_hash']
-            data_to_predict = data_to_predict.drop(columns=[col for col in ignore_cols if col in data_to_predict.columns], errors='ignore')
+            df_processing = data_to_predict.drop(columns=[col for col in ignore_cols if col in data_to_predict.columns], errors='ignore')
             
-            # 3. Select Features and Handle Missing Columns
-            missing_features = [f for f in final_features if f not in data_to_predict.columns]
-            if missing_features:
-                 raise ValueError(f"Input CSV is missing {len(missing_features)} required features, e.g., {missing_features[:3]}")
-
-            # Filter the input data to ONLY contain the features the model was trained on
-            # This also ensures the correct order of features (column order matters!)
-            X_pred = data_to_predict[final_features].copy()
-            
-            # 4. Apply Scaling (Transformation)
-            X_input = X_pred.values # Start with numpy array of features
+            # 3. Apply Scaling (NOW BEFORE SELECTION)
             if scaler:
                 self.signals.progress.emit("Applying feature scaling (transform)...")
-                X_input = scaler.transform(X_input) # Apply the fitted scaler's transformation
+                # We scale the entire dataframe. 
+                # Note: scaler.transform returns a numpy array.
+                scaled_array = scaler.transform(df_processing)
+                # Reconstruct into a DataFrame to keep track of column names for the next step
+                df_processing = pd.DataFrame(scaled_array, columns=df_processing.columns)
 
+            # 4. Select Features and Handle Missing Columns
+            # Now we filter the ALREADY SCALED data down to what the model needs
+            missing_features = [f for f in final_features if f not in df_processing.columns]
+            if missing_features:
+                raise ValueError(f"Input CSV is missing {len(missing_features)} required features.")
+
+            # Extract values in the specific order the model expects
+            X_input = df_processing[final_features].values
+            
             # 5. Generate Predictions
             self.signals.progress.emit("Generating predictions...")
             predictions = model.predict(X_input)
             
             # 6. Integrate Results and Save
+            # We add the prediction back to the ORIGINAL dataframe for the final export
             data_to_predict['Prediction (Bug=1)'] = predictions.astype(int)
             
             self.signals.progress.emit(f"Saving results to: {self.output_path}")
@@ -133,13 +137,9 @@ class ModelPredictionWorker(QRunnable):
                 'rows_predicted': len(data_to_predict)
             })
 
-        except FileNotFoundError as e:
-            self.signals.error.emit(f"Inference Setup Error: Required file not found: {str(e)}")
         except Exception as e:
             self.signals.error.emit(f"Prediction Error: {type(e).__name__}: {str(e)}")
-
-
-
+            
 class PredictionScenarioCV(QWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
