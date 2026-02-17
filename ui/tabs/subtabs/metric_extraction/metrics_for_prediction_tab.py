@@ -14,6 +14,7 @@ from PyQt5.QtCore import (
 # Import the core logic (MetricsExtractor no longer needs libclang_path in __init__)
 from core.metrics_extractor import MetricsExtractor 
 from core.metrics_calculator import MetricsCalculator 
+from ui.components.reset_mixin import ResetMixin 
 
 # --- 1. Worker Signals Class (No Change) ---
 class WorkerSignals(QObject):
@@ -57,7 +58,7 @@ class MetricsWorker(QRunnable):
             self.signals.error.emit(str(e))
 
 # ----------------------------------------------------------------------
-class MetricsExtractionSubTab(QWidget):
+class MetricsExtractionSubTab(QWidget, ResetMixin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
@@ -114,7 +115,14 @@ class MetricsExtractionSubTab(QWidget):
         h_output.addWidget(self.browse_output_btn)
         vbox.addLayout(h_output)
         
-        vbox.addWidget(self.extract_btn)
+        # Button layout for extract and reset buttons
+        button_layout = QHBoxLayout()
+        button_layout.addWidget(self.extract_btn)
+        
+        # Add reset button beside extract button
+        self.setup_reset_button(button_layout)
+        
+        vbox.addLayout(button_layout)
         vbox.addWidget(self.progress_bar)
         
         vbox.addWidget(self.scroll_area) 
@@ -136,6 +144,13 @@ class MetricsExtractionSubTab(QWidget):
         self.output_input.setEnabled(enabled)
         self.browse_output_btn.setEnabled(enabled)
         self.extract_btn.setEnabled(enabled)
+        
+        # Control reset button state
+        if enabled:
+            self.enable_reset_button()
+        else:
+            self.disable_reset_button()
+            
         if enabled:
             self.extract_btn.setText("Extract Metrics and Save")
             self.extract_btn.setStyleSheet("background-color: #4CAF50; color: white;")
@@ -244,3 +259,23 @@ class MetricsExtractionSubTab(QWidget):
         
         self.results_table.resizeColumnsToContents()
         self.scroll_area.setVisible(True)
+
+    def reset_to_defaults(self):
+        """Reset all parameters and input files to default values."""
+        # Clear input fields
+        self.folder_input.clear()
+        self.output_input.clear()
+        
+        # Reset progress bar
+        self.progress_bar.setValue(0)
+        
+        # Clear results
+        self.df_result = None
+        self.results_table.setRowCount(0)
+        self.results_table.setColumnCount(0)
+        
+        # Hide results area
+        self.scroll_area.setVisible(False)
+        
+        # Reset UI state
+        self.set_ui_state(True)

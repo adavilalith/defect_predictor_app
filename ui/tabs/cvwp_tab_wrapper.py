@@ -7,9 +7,12 @@ class CVWPWrapperTab(QWidget):
         super().__init__(parent)
         self.setObjectName("CVWPWrapperTab")
         layout = QVBoxLayout(self)
-        sub_tabs = QTabWidget()
-        layout.addWidget(sub_tabs)
+        self.sub_tabs = QTabWidget()
+        layout.addWidget(self.sub_tabs)
 
         # Uses the CV-shared pages
-        sub_tabs.addTab(TestScenarioCV(), "Test Scenario")
-        sub_tabs.addTab(PredictionScenarioCV(), "Prediction Scenario")
+        self.test_tab = TestScenarioCV()
+        self.prediction_tab = PredictionScenarioCV()
+        
+        self.sub_tabs.addTab(self.test_tab, "Test Scenario")
+        self.sub_tabs.addTab(self.prediction_tab, "Prediction Scenario")

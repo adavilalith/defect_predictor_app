@@ -15,6 +15,7 @@ from PyQt5.QtGui import QPixmap
 from core.model_configs import MODEL_CONFIGS 
 from core.cvwp_ml_trainer import run_cvwp_ml_experiment 
 from ui.components.csv_analytics_dialog import CSVAnalyticsDialog
+from ui.components.reset_mixin import ResetMixin
 
 class TrainingWorkerSignals(QObject):
     progress = pyqtSignal(dict)
@@ -33,7 +34,7 @@ class CVWPTrainingWorker(QRunnable):
         except Exception as e:
             self.signals.error.emit(f"Experiment Error in Worker: {type(e).__name__}: {str(e)}")
 
-class TestScenarioCV(QWidget):
+class TestScenarioCV(QWidget, ResetMixin):
     """UI for CVWP Model Training with Multiple CSV support and Dataset Inspector."""
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -174,7 +175,15 @@ class TestScenarioCV(QWidget):
         self.train_btn = QPushButton("Start Training and Evaluation")
         self.train_btn.setStyleSheet("background-color: #008CBA; color: white; font-weight: bold; padding: 10px;")
         self.train_btn.clicked.connect(self.start_training)
-        config_layout.addWidget(self.train_btn) 
+        
+        # Button layout for train and reset buttons
+        button_layout = QHBoxLayout()
+        button_layout.addWidget(self.train_btn)
+        
+        # Add reset button beside train button
+        self.setup_reset_button(button_layout)
+        
+        config_layout.addLayout(button_layout)
         self.progress_bar = QProgressBar()
         config_layout.addWidget(self.progress_bar) 
         
@@ -354,3 +363,51 @@ class TestScenarioCV(QWidget):
     def set_ui_state(self, state):
         for w in [self.browse_train_btn, self.browse_test_btn, self.train_btn, self.fs_group, self.model_combo]:
             w.setEnabled(state)
+        
+        # Control reset button state
+        if state:
+            self.enable_reset_button()
+        else:
+            self.disable_reset_button()
+
+    def reset_to_defaults(self):
+        """Reset all parameters and input files to default values."""
+        # Clear file selections
+        self.train_files = []
+        self.test_files = []
+        self.train_data_input.clear()
+        self.test_data_input.clear()
+        self.output_dir_input.clear()
+        
+        # Reset checkboxes and settings
+        self.save_model_check.setChecked(True)
+        self.norm_check.setChecked(False)
+        self.smote_check.setChecked(False)
+        self.fs_check.setChecked(False)
+        
+        # Reset combo boxes
+        self.model_combo.setCurrentIndex(0)
+        self.fs_method_combo.setCurrentIndex(0)
+        
+        # Reset feature selection inputs
+        self.fs_k_input.setValue(10)
+        self.fs_csv_input.clear()
+        
+        # Hide inspector and results
+        self.inspector_group.setVisible(False)
+        self.results_container.setVisible(False)
+        
+        # Clear results
+        self.results_summary_label.setText("Model: N/A | Dataset: CVWP | Preprocessing: N/A")
+        self.report_text.setText("Classification Report will appear here...")
+        self.confusion_matrix_display.setText("N/A")
+        self.confusion_matrix_display.clear()
+        
+        # Reset progress bar
+        self.progress_bar.setValue(0)
+        
+        # Update hyperparameters UI
+        self.update_hyperparams_ui()
+        
+        # Reset UI state
+        self.set_ui_state(True)
