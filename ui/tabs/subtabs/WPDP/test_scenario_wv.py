@@ -15,6 +15,7 @@ import csv
 from core.model_configs import MODEL_CONFIGS 
 from core.wpdp_ml_trainer import run_wpdp_ml_experiment 
 from ui.components.csv_analytics_dialog import CSVAnalyticsDialog
+from ui.components.reset_mixin import ResetMixin
 
 
 
@@ -35,7 +36,7 @@ class WPDPTrainingWorker(QRunnable):
             self.signals.error.emit(f"Experiment Error in Worker: {type(e).__name__}: {str(e)}")
 
 
-class TestScenarioWV(QWidget):
+class TestScenarioWV(QWidget, ResetMixin):
     """UI for the WPDP Model Training and Evaluation Scenario, including 
     Preprocessing, Feature Selection, and Hyperparameter tuning."""
     def __init__(self, *args, **kwargs):
@@ -186,7 +187,15 @@ class TestScenarioWV(QWidget):
         self.train_btn = QPushButton("Start Training and Evaluation")
         self.train_btn.setStyleSheet("background-color: #008CBA; color: white; font-weight: bold; padding: 10px;")
         self.train_btn.clicked.connect(self.start_training)
-        config_layout.addWidget(self.train_btn) 
+        
+        # Button layout for train and reset buttons
+        button_layout = QHBoxLayout()
+        button_layout.addWidget(self.train_btn)
+        
+        # Add reset button beside train button
+        self.setup_reset_button(button_layout)
+        
+        config_layout.addLayout(button_layout)
         self.progress_bar = QProgressBar()
         config_layout.addWidget(self.progress_bar) 
         
@@ -447,6 +456,7 @@ Actual Not Bug (0): | {cm_data[0][1]} (False Positives) | {cm_data[0][0]} (True 
                 self.confusion_matrix_display.setText(error_msg)
                 self.confusion_matrix_display.setStyleSheet("color: red; white-space: pre;")
         save_msg = f"Model and log saved to: {metrics_results.get('Save Path', 'N/A')}"
+        
         QMessageBox.information(self, "Training Complete", f"Model training and evaluation finished successfully.\n\n{save_msg}")
     def training_error(self, message):
         self.set_ui_state(True)
@@ -483,6 +493,12 @@ Actual Not Bug (0): | {cm_data[0][1]} (False Positives) | {cm_data[0][0]} (True 
         # internal widgets during training/not training.
         self.fs_group.setEnabled(enabled) 
         
+        # Control reset button state
+        if enabled:
+            self.enable_reset_button()
+        else:
+            self.disable_reset_button()
+        
         # When re-enabling, we must ensure the inner components follow the checkbox's current state.
         if enabled:
             # This will hide k/csv inputs if fs_check is unchecked, 
@@ -501,6 +517,50 @@ Actual Not Bug (0): | {cm_data[0][1]} (False Positives) | {cm_data[0][0]} (True 
     def update_progress(self, progress_data, config):
         percent = progress_data.get('percent', 0)
         self.progress_bar.setValue(int(percent))
+
+    def reset_to_defaults(self):
+        """Reset all parameters and input files to default values."""
+        # Clear input fields
+        self.data_input.clear()
+        self.output_dir_input.clear()
+        self.fs_csv_input.clear()
+        
+        # Reset checkboxes and sliders to defaults
+        self.save_model_check.setChecked(True)
+        self.split_slider.setValue(70)
+        self.split_label.setText("70% Train / 30% Test")
+        self.norm_check.setChecked(False)
+        self.smote_check.setChecked(False)
+        self.fs_check.setChecked(False)
+        
+        # Reset combo boxes to first item
+        self.fs_method_combo.setCurrentIndex(0)
+        self.model_combo.setCurrentIndex(0)
+        
+        # Reset feature selection inputs
+        self.fs_k_input.setValue(10)
+        
+        # Hide dataset summary
+        self.dataset_summary_group.setVisible(False)
+        
+        # Clear and hide results
+        self.results_container.setVisible(False)
+        self.results_summary_label.setText("Model: N/A | Split: N/A | Preprocessing: N/A")
+        self.report_text.setText("Classification Report will appear here...")
+        self.confusion_matrix_display.setText("N/A")
+        self.confusion_matrix_display.clear()
+        
+        # Reset progress bar
+        self.progress_bar.setValue(0)
+        
+        # Update hyperparameters UI to reflect default model
+        self.update_hyperparams_ui()
+        
+        # Update feature selection visibility
+        self.update_fs_method_input(self.fs_method_combo.currentIndex())
+        
+        # Reset UI state
+        self.set_ui_state(True)
 
 # Example usage (requires QApplicatin to run)
 # if __name__ == '__main__':

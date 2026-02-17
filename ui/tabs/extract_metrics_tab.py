@@ -6,6 +6,7 @@ from core.metrics_extractor import initialize_clang_library # Function for one-t
 from ui.tabs.subtabs.metric_extraction.metrics_for_prediction_tab import MetricsExtractionSubTab
 from ui.tabs.subtabs.metric_extraction.metrics_bug_label_tab import MetricsBugLabelSubTab
 from ui.tabs.subtabs.metric_extraction.existing_metrics_bug_tab import UseExistingMetricsSubTab
+from ui.components.reset_mixin import ResetMixin
 
 
 # --- Placeholder Classes for Future Sub-Tabs ---

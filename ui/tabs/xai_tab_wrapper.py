@@ -15,9 +15,12 @@ class XAIWrapperTab(QWidget):
         self.setObjectName("XAIWrapperTab")
         
         layout = QVBoxLayout(self)
-        sub_tabs = QTabWidget()
-        layout.addWidget(sub_tabs)
+        self.sub_tabs = QTabWidget()
+        layout.addWidget(self.sub_tabs)
         
         # Add the two XAI specific sub-tabs
-        sub_tabs.addTab(WithinVersionXAI(), "With Version Within Project")
-        sub_tabs.addTab(CrossVersionXAI(), "Cross Version Cross Project")   
+        self.within_version_tab = WithinVersionXAI()
+        self.cross_version_tab = CrossVersionXAI()
+        
+        self.sub_tabs.addTab(self.within_version_tab, "With Version Within Project")
+        self.sub_tabs.addTab(self.cross_version_tab, "Cross Version Cross Project")   

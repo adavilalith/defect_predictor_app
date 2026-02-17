@@ -18,6 +18,9 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import Qt
 
+# Import reset functionality
+from ui.components.reset_mixin import ResetMixin
+
 # Scikit-learn Imports
 from sklearn.preprocessing import StandardScaler
 
@@ -39,7 +42,7 @@ except ImportError:
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
-class DefaultModelTab(QWidget):
+class DefaultModelTab(QWidget, ResetMixin):
     """
     UI and logic for running default bug prediction models on a CSV dataset.
     Features include: CSV data loading, analytics preview, data normalization, 
@@ -197,7 +200,15 @@ class DefaultModelTab(QWidget):
             }
         """)
         self.run_btn.clicked.connect(self.run_default_prediction)
-        form_layout.addRow(self.run_btn)
+        
+        # Create button layout for run and reset buttons
+        button_layout = QHBoxLayout()
+        button_layout.addWidget(self.run_btn)
+        
+        # Add reset button beside run button
+        self.setup_reset_button(button_layout)
+        
+        form_layout.addRow(button_layout)
         
         self.input_layout.addWidget(input_widget)
         # Add a spacer to push elements to the top
@@ -508,6 +519,10 @@ class DefaultModelTab(QWidget):
         self.progress_bar.setRange(0, 0)
         self.run_btn.setEnabled(False)
         self.run_btn.setText("Processing...")
+        
+        # Disable reset button during processing
+        self.disable_reset_button()
+        
         QApplication.processEvents()
         
         try:
@@ -576,6 +591,9 @@ class DefaultModelTab(QWidget):
             self.progress_bar.setVisible(False)
             self.run_btn.setEnabled(True)
             self.run_btn.setText("🚀 Run Default Prediction")
+            
+            # Re-enable reset button after processing
+            self.enable_reset_button()
 
     def load_df_to_table(self, df: pd.DataFrame, table: QTableWidget):
         """Load DataFrame data into the specified table widget (limited to 500 rows)."""
@@ -649,6 +667,47 @@ class DefaultModelTab(QWidget):
                 QMessageBox.information(self, "Success", f"CSV file saved to:\n{save_path}")
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Failed to save CSV: {e}")
+
+    def reset_to_defaults(self):
+        """Reset all parameters and input files to default values."""
+        # Clear file selection
+        self.csv_file = ""
+        self.current_csv_path = ""
+        self.csv_lineedit.clear()
+        
+        # Hide and reset CSV info
+        self.csv_info_group.setVisible(False)
+        self.analytics_btn.setVisible(False)
+        self.file_name_label.clear()
+        self.file_size_label.clear()
+        self.rows_label.clear()
+        self.columns_label.clear()
+        self.missing_data_label.clear()
+        
+        # Reset configuration
+        self.normalize_cb.setChecked(False)
+        
+        # Clear prediction results
+        self.prediction_results.clear()
+        self.temp_csv_paths.clear()
+        
+        # Clear and hide preview tables
+        for key in self.model_info.keys():
+            table = getattr(self, f'table_{key}', None)
+            if table:
+                table.setRowCount(0)
+                table.setColumnCount(0)
+        
+        # Hide preview box
+        self.preview_box.setVisible(False)
+        
+        # Reset progress bar
+        self.progress_bar.setVisible(False)
+        self.progress_bar.setValue(0)
+        
+        # Reset run button
+        self.run_btn.setEnabled(True)
+        self.run_btn.setText("🚀 Run Default Prediction")
 
 if __name__ == '__main__':
     # This block allows you to run the widget in isolation for testing
