@@ -148,7 +148,7 @@ class DefectPredictionUI(QMainWindow):
         self.tabs.addTab(WPDPWrapperTab(), "WPDP")
         
         # 3. CVWP Tab (Cross Version Within Project)
-        self.tabs.addTab(CVWPWrapperTab(), "CVWP")
+        self.tabs.addTab(CVWPWrapperTab(), "CVCPDP")
         
         # 4. CVCP Tab (Cross Version Cross Project)
         # self.tabs.addTab(CVCPWrapperTab(), "CVCP")

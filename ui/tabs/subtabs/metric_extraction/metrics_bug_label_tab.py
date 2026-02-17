@@ -103,7 +103,7 @@ class MetricsBugLabelSubTab(QWidget):
         # 3. Bug Function Name Column
         self.bug_function_name_input = QLineEdit()
         self.bug_function_name_input.setPlaceholderText("e.g., 'Function_Name' (Column in Bug CSV)")
-        input_form.addRow(QLabel("Bug Name Column:"), self.bug_function_name_input)
+        input_form.addRow(QLabel("Function Name Column:"), self.bug_function_name_input)
         
         # 4. Output Selection (ANALYTICS BUTTON ADDED)
         self.output_input = QLineEdit()

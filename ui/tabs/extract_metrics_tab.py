@@ -63,11 +63,11 @@ class ExtractMetricsTab(QWidget):
         
         # 2.2 Extract Metrics _Add Bug Label (Placeholder)
         self.bug_label_tab = MetricsBugLabelSubTab()
-        self.tabs.addTab(self.bug_label_tab, "Extract Metrics _Add Bug Label")
+        self.tabs.addTab(self.bug_label_tab, "Extract Metrics and Add Bug Label")
         
         # 2.3 Use Existing Metrics _Add Bug Label (Placeholder)
         self.existing_bug_label_tab = UseExistingMetricsSubTab()
-        self.tabs.addTab(self.existing_bug_label_tab, "Use Existing Metrics _Add Bug Label")
+        self.tabs.addTab(self.existing_bug_label_tab, "Use Existing Metrics and Add Bug Label")
 
         # 2.4 GraphBERT Based Feature Extraction (Placeholder)
         self.graphbert_tab = GraphBERTSubTab()
