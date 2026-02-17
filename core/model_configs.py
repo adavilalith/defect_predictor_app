@@ -20,6 +20,14 @@ from catboost import CatBoostClassifier
 # }
 
 MODEL_CONFIGS = {
+    "Random Forest (RF)": {
+        "class": RandomForestClassifier,
+        "params": [
+            {'name': 'n_estimators', 'type': 'int', 'default': 25, 'range': (10, 500)},
+            {'name': 'max_depth', 'type': 'int', 'default': 5, 'range': (1, 50)},
+            {'name': 'min_samples_leaf', 'type': 'int', 'default': 1, 'range': (1, 10)},
+        ]
+    },
     "Decision Tree": {
         "class": DecisionTreeClassifier,
         "params": [
@@ -28,14 +36,7 @@ MODEL_CONFIGS = {
             {'name': 'criterion', 'type': 'str', 'default': 'gini', 'options': ['gini', 'entropy']},
         ]
     },
-    "Random Forest (RF)": {
-        "class": RandomForestClassifier,
-        "params": [
-            {'name': 'n_estimators', 'type': 'int', 'default': 100, 'range': (10, 500)},
-            {'name': 'max_depth', 'type': 'int', 'default': 10, 'range': (1, 50)},
-            {'name': 'min_samples_leaf', 'type': 'int', 'default': 1, 'range': (1, 10)},
-        ]
-    },
+
     "Support Vector Machine (SVM)": {
         "class": SVC,
         "params": [
