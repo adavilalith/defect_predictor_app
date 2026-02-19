@@ -1,25 +1,23 @@
 import os
 import sys
 import json
-import shutil
-import tempfile
 import subprocess
 import pandas as pd
-
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QFormLayout,
-    QLabel, QLineEdit, QPushButton, QFileDialog,
-    QComboBox, QFrame, QProgressBar,
-    QTableWidget, QTableWidgetItem,
-    QSplitter, QMessageBox,
+    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
+    QLineEdit, QFileDialog, QProgressBar, 
+    QMessageBox, QScrollArea, QTableWidget, QTableWidgetItem,
+    QSizePolicy, QLabel, QComboBox, QFrame
 )
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QObject
 
-# ── WATCHER REMAINS THE SAME ────────────────────────────────────────────────
+# Assuming these exist in your project structure
+from ui.components.reset_mixin import ResetMixin 
 
+# --- 1. Subprocess Watcher ---
 class SubprocessWatcher(QObject):
     progress = pyqtSignal(int, int)
-    finished = pyqtSignal(str, int)
+    finished = pyqtSignal(pd.DataFrame)
     error    = pyqtSignal(str)
 
     def __init__(self, params, worker_script, python_exe):
@@ -48,7 +46,11 @@ class SubprocessWatcher(QObject):
                     if event["type"] == "progress":
                         self.progress.emit(event["current"], event["total"])
                     elif event["type"] == "done":
-                        self.finished.emit(self._params["output_path"], event["rows"])
+                        if os.path.exists(self._params["output_path"]):
+                            df = pd.read_csv(self._params["output_path"])
+                            self.finished.emit(df)
+                        else:
+                            self.error.emit("Worker finished but output file not found.")
                         return
                     elif event["type"] == "error":
                         self.error.emit(event["message"])
@@ -61,176 +63,206 @@ class SubprocessWatcher(QObject):
         except Exception as e:
             self.error.emit(str(e))
 
-# ── MAIN TAB WITH YOUR REQUESTED UI ──────────────────────────────────────────
-
-class GraphBERTSubTab(QWidget):
+# --- 2. Main Tab ---
+class GraphBERTSubTab(QWidget, ResetMixin):
     _LIBCLANG_PATH = "/opt/rh/llvm-toolset-9.0/root/usr/lib64/libclang.so.9"
-    _GRAPHCODEBERT_MODEL_PATH = "/home/lalith/DRDL/bug-prediction/extract_metrics/embeddings_graphbert/graphcodebert-base"
-    _PREGENERATED_BASE = "/home/lalith/DRDL/bug-prediction/extract_metrics/embeddings_graphbert/graphbert/graph_embeddings/"
+    _MODEL_PATH = "/home/lalith/DRDL/bug-prediction/extract_metrics/embeddings_graphbert/graphcodebert-base"
+    _PREGEN_BASE = "/home/lalith/DRDL/bug-prediction/extract_metrics/embeddings_graphbert/graphbert/graph_embeddings/"
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.latest_csv_path = None
         self._this_dir = os.path.dirname(os.path.abspath(__file__))
-        
-        # Critical: Define the App Root so the Worker knows where 'core/' is
-        # path: .../defect_predictor_app/ui/tabs/subtabs/metric_extraction/
-        # app_root: .../defect_predictor_app/ (4 levels up)
         self._app_root = os.path.abspath(os.path.join(self._this_dir, "../../../../"))
         self._worker_script = os.path.join(self._this_dir, "embedding_subprocess_worker.py")
         
-        self._init_ui()
+        self.df_result = None
+        self.init_ui()
 
-    def _init_ui(self):
-        main_layout = QVBoxLayout(self)
-        main_layout.setSpacing(0)
-        main_layout.setContentsMargins(0, 0, 0, 0)
+    def init_ui(self):
+        # Main Layout
+        self.main_vbox = QVBoxLayout(self)
+        self.main_vbox.setSpacing(10)
+        self.main_vbox.setContentsMargins(10, 10, 10, 10)
 
-        splitter = QSplitter(Qt.Vertical)
-
-        # ── Control area ───────────────────────────────────────────────
-        control_widget = QWidget()
-        ctrl = QVBoxLayout(control_widget)
-        ctrl.setSpacing(16)
-        ctrl.setContentsMargins(12, 12, 12, 12)
-
-        # Section 1: Load pre-generated
-        s1_title = QLabel("View Pre-generated Embeddings")
-        s1_title.setStyleSheet("font-weight: bold; font-size: 14px;")
-        ctrl.addWidget(s1_title)
-
-        s1_form = QFormLayout()
-        dropdown_row = QHBoxLayout()
+        # --- Section: Pre-generated ---
+        pregen_layout = QHBoxLayout()
         self.pregenerated_dropdown = QComboBox()
         self.pregenerated_dropdown.addItems(["p1v1", "p1v2", "p1v3", "p2v1", "p2v2", "p3v1", "p3v2", "p3v3"])
-        dropdown_row.addWidget(self.pregenerated_dropdown)
+        self.load_pregen_btn = QPushButton("Load Pre-generated")
+        
+        pregen_layout.addWidget(QLabel("Pre-generated:"))
+        pregen_layout.addWidget(self.pregenerated_dropdown)
+        pregen_layout.addWidget(self.load_pregen_btn)
+        pregen_layout.addStretch()
+        self.main_vbox.addLayout(pregen_layout)
 
-        self.load_btn = QPushButton("Load Embeddings")
-        self.load_btn.setStyleSheet("background-color: #4CAF50; color: white; padding: 8px; font-weight: bold;")
-        self.load_btn.clicked.connect(self._load_pregenerated_embeddings)
+        line = QFrame(); line.setFrameShape(QFrame.HLine); line.setFrameShadow(QFrame.Sunken)
+        self.main_vbox.addWidget(line)
 
-        s1_form.addRow(QLabel("Select Pre-generated Embeddings:"), dropdown_row)
-        s1_form.addRow(self.load_btn)
-        ctrl.addLayout(s1_form)
+        # --- Section: Generation Inputs ---
+        # Folder Selection
+        h_folder = QHBoxLayout()
+        self.folder_input = QLineEdit()
+        self.folder_input.setPlaceholderText("Select Source Code Folder...")
+        self.browse_folder_btn = QPushButton("Browse Folder")
+        h_folder.addWidget(self.folder_input)
+        h_folder.addWidget(self.browse_folder_btn)
+        self.main_vbox.addLayout(h_folder)
 
-        sep = QFrame(); sep.setFrameShape(QFrame.HLine); sep.setFrameShadow(QFrame.Sunken); ctrl.addWidget(sep)
+        # Output Selection
+        h_output = QHBoxLayout()
+        self.output_input = QLineEdit()
+        self.output_input.setPlaceholderText("Select Output CSV File Path...")
+        self.browse_output_btn = QPushButton("Browse Output")
+        h_output.addWidget(self.output_input)
+        h_output.addWidget(self.browse_output_btn)
+        self.main_vbox.addLayout(h_output)
 
-        # Section 2: Generate new
-        s2_title = QLabel("Generate New Embeddings (Function Level)")
-        s2_title.setStyleSheet("font-weight: bold; font-size: 14px;")
-        ctrl.addWidget(s2_title)
+        # --- Section: Action Buttons ---
+        button_layout = QHBoxLayout()
+        self.extract_btn = QPushButton("Generate Embeddings and Save")
+        self.extract_btn.setStyleSheet("background-color: #007ACC; color: white;")
+        button_layout.addWidget(self.extract_btn)
+        
+        self.setup_reset_button(button_layout)
+        self.main_vbox.addLayout(button_layout)
 
-        s2_form = QFormLayout()
-        browse_row = QHBoxLayout()
-        self.input_lineedit = QLineEdit()
-        browse_btn = QPushButton("Browse Folder")
-        browse_btn.clicked.connect(lambda: self._browse_folder(self.input_lineedit))
-        browse_row.addWidget(self.input_lineedit)
-        browse_row.addWidget(browse_btn)
+        # --- Section: Progress & Results ---
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setRange(0, 100)
+        self.progress_bar.setValue(0)
+        self.main_vbox.addWidget(self.progress_bar)
 
-        self.output_lineedit = QLineEdit()
-        self.output_lineedit.setPlaceholderText("e.g. my_embeddings.csv")
+        self.results_table = QTableWidget()
+        self.results_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setWidget(self.results_table)
+        self.scroll_area.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.scroll_area.setVisible(False)
+        self.main_vbox.addWidget(self.scroll_area)
 
-        self.generate_btn = QPushButton("Generate Embeddings")
-        self.generate_btn.setStyleSheet("background-color: #4CAF50; color: white; padding: 8px; font-weight: bold;")
-        self.generate_btn.clicked.connect(self._on_generate_clicked)
+        # This stretch is the key: it stays at 0 when table is visible, 
+        # but pushes everything up when the table is hidden.
+        self.main_vbox.addStretch(1)
 
-        s2_form.addRow(QLabel("Select Source Code Folder:"), browse_row)
-        s2_form.addRow(QLabel("Output CSV Name:"), self.output_lineedit)
-        s2_form.addRow(self.generate_btn)
-        ctrl.addLayout(s2_form)
+        # --- Signals ---
+        self.load_pregen_btn.clicked.connect(self._load_pregenerated)
+        self.browse_folder_btn.clicked.connect(self._select_source_folder)
+        self.browse_output_btn.clicked.connect(self._select_output_file)
+        self.extract_btn.clicked.connect(self.start_generation)
 
-        self.status_label = QLabel("")
-        self.status_label.setStyleSheet("color: #555; font-style: italic;")
-        ctrl.addWidget(self.status_label)
+    def set_ui_state(self, enabled):
+        self.folder_input.setEnabled(enabled)
+        self.browse_folder_btn.setEnabled(enabled)
+        self.output_input.setEnabled(enabled)
+        self.browse_output_btn.setEnabled(enabled)
+        self.extract_btn.setEnabled(enabled)
+        self.pregenerated_dropdown.setEnabled(enabled)
+        self.load_pregen_btn.setEnabled(enabled)
 
-        self.progress_bar = QProgressBar(); self.progress_bar.setVisible(False)
-        ctrl.addWidget(self.progress_bar)
-        splitter.addWidget(control_widget)
+        if enabled:
+            self.enable_reset_button()
+            self.extract_btn.setText("Generate Embeddings and Save")
+            self.extract_btn.setStyleSheet("background-color: #007ACC; color: white;")
+        else:
+            self.disable_reset_button()
+            self.extract_btn.setText("Processing...")
+            self.extract_btn.setStyleSheet("background-color: #FFC107; color: black;")
 
-        # Preview area
-        self.preview_box = self._build_preview_widget()
-        splitter.addWidget(self.preview_box)
-        main_layout.addWidget(splitter)
+    def _select_source_folder(self):
+        path = QFileDialog.getExistingDirectory(self, "Select Source Folder", os.getcwd())
+        if path: self.folder_input.setText(path)
 
-    def _build_preview_widget(self):
-        w = QWidget(); l = QVBoxLayout(w)
-        self.preview_label = QLabel("Preview of Extracted Embeddings:")
-        self.preview_table = QTableWidget()
-        self.download_button = QPushButton("Download CSV")
-        self.download_button.clicked.connect(self._download_csv)
-        l.addWidget(self.preview_label); l.addWidget(self.preview_table); l.addWidget(self.download_button)
-        w.setVisible(False)
-        return w
+    def _select_output_file(self):
+        path, _ = QFileDialog.getSaveFileName(self, "Save Metrics CSV", "embeddings_output.csv", "CSV Files (*.csv)")
+        if path: self.output_input.setText(path)
 
-    # ── LOGIC ──
+    def start_generation(self):
+        in_path = self.folder_input.text().strip()
+        out_path = self.output_input.text().strip()
 
-    def _browse_folder(self, edit):
-        path = QFileDialog.getExistingDirectory(self, "Select Folder")
-        if path: edit.setText(path)
-
-    def _on_generate_clicked(self):
-        in_path = self.input_lineedit.text().strip()
-        if not in_path: return
-
-        out_name = self.output_lineedit.text().strip() or "output_embeddings.csv"
-        out_path = os.path.join(tempfile.gettempdir(), out_name)
+        if not in_path or not os.path.isdir(in_path):
+            QMessageBox.warning(self, "Invalid Input", "Please select a valid source folder.")
+            return
+        if not out_path:
+            QMessageBox.warning(self, "Invalid Input", "Please select an output path.")
+            return
 
         params = {
-            "app_root": self._app_root,        # Passed to worker for sys.path
+            "app_root": self._app_root,
             "input_path": in_path,
             "output_path": out_path,
             "libclang_path": self._LIBCLANG_PATH,
-            "model_path": self._GRAPHCODEBERT_MODEL_PATH
+            "model_path": self._MODEL_PATH
         }
 
-        self.generate_btn.setEnabled(False)
-        self.progress_bar.setVisible(True)
-        self.progress_bar.setRange(0, 0)
-        self.status_label.setText("Worker starting...")
+        self.set_ui_state(False)
+        self.progress_bar.setValue(0)
+        self.scroll_area.setVisible(False)
 
         self.thread = QThread()
         self.worker = SubprocessWatcher(params, self._worker_script, sys.executable)
         self.worker.moveToThread(self.thread)
+        
         self.thread.started.connect(self.worker.run)
-        self.worker.progress.connect(self._update_progress)
-        self.worker.finished.connect(self._on_done)
+        self.worker.progress.connect(self._update_progress_bar)
+        self.worker.finished.connect(self._on_finished)
         self.worker.error.connect(self._on_error)
         self.thread.start()
 
-    def _update_progress(self, curr, total):
-        self.progress_bar.setRange(0, total); self.progress_bar.setValue(curr)
-        self.status_label.setText(f"Processing function {curr}/{total}")
+    def _update_progress_bar(self, curr, total):
+        self.progress_bar.setRange(0, total)
+        self.progress_bar.setValue(curr)
 
-    def _on_done(self, path, rows):
-        self.generate_btn.setEnabled(True); self.progress_bar.setVisible(False)
-        self.latest_csv_path = path
-        self._load_csv_to_table(path)
-        QMessageBox.information(self, "Success", f"Processed {rows} functions.")
+    def _on_finished(self, df):
+        self.thread.quit()
+        self.df_result = df
+        self.set_ui_state(True)
+        self.preview_results(df)
+        QMessageBox.information(self, "Success", f"Embeddings saved to:\n{self.output_input.text()}")
 
     def _on_error(self, msg):
-        self.generate_btn.setEnabled(True); self.progress_bar.setVisible(False)
+        self.thread.quit()
+        self.set_ui_state(True)
         QMessageBox.critical(self, "Error", msg)
 
-    def _load_csv_to_table(self, path):
-        df = pd.read_csv(path).head(100)
-        self.preview_table.setRowCount(len(df)); self.preview_table.setColumnCount(len(df.columns))
-        self.preview_table.setHorizontalHeaderLabels(list(df.columns))
-        for i, (idx, row) in enumerate(df.iterrows()):
-            for j, val in enumerate(row):
-                self.preview_table.setItem(i, j, QTableWidgetItem(str(val)))
-        self.preview_box.setVisible(True)
+    def preview_results(self, df):
+        if df is None or df.empty:
+            self.scroll_area.setVisible(False)
+            return
 
-    def _load_pregenerated_embeddings(self):
+        df_preview = df.head(50)
+        self.results_table.setColumnCount(len(df_preview.columns))
+        self.results_table.setHorizontalHeaderLabels(df_preview.columns)
+        self.results_table.setRowCount(len(df_preview))
+        
+        for i, (idx, row) in enumerate(df_preview.iterrows()):
+            for j, col in enumerate(df_preview.columns):
+                val = row[col]
+                text = f"{val:.4f}" if isinstance(val, float) else str(val)
+                item = QTableWidgetItem(text)
+                item.setTextAlignment(Qt.AlignCenter)
+                self.results_table.setItem(i, j, item)
+        
+        self.results_table.resizeColumnsToContents()
+        self.scroll_area.setVisible(True)
+
+    def _load_pregenerated(self):
         sel = self.pregenerated_dropdown.currentText()
-        path = os.path.join(self._PREGENERATED_BASE, f"{sel}_embeddings.csv")
+        path = os.path.join(self._PREGEN_BASE, f"{sel}_embeddings.csv")
         if os.path.exists(path):
-            self.latest_csv_path = path
-            self._load_csv_to_table(path)
+            self.df_result = pd.read_csv(path)
+            self.preview_results(self.df_result)
         else:
-            QMessageBox.warning(self, "Error", "File not found.")
+            QMessageBox.warning(self, "Error", f"File not found: {path}")
 
-    def _download_csv(self):
-        if not self.latest_csv_path: return
-        dest, _ = QFileDialog.getSaveFileName(self, "Save CSV", "", "CSV (*.csv)")
-        if dest: shutil.copy(self.latest_csv_path, dest)
+    def reset_to_defaults(self):
+        self.folder_input.clear()
+        self.output_input.clear()
+        self.progress_bar.setValue(0)
+        self.df_result = None
+        self.results_table.setRowCount(0)
+        self.scroll_area.setVisible(False)
+        self.set_ui_state(True)
