@@ -183,7 +183,7 @@ class DefectPredictionUI(QMainWindow):
         self.tabs.addTab(DefaultModelTab(), "Default Model")
         
         # 6. XAI Tab (Wrapper for its 2 sub-tabs)
-=======
+
 import sys
 from pathlib import Path
 import os
