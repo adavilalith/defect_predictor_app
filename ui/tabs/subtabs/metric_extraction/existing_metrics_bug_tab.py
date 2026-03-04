@@ -16,6 +16,7 @@ from PyQt5.QtCore import (
 from core.add_bug_label_to_existing_metrics import process_existing_metrics_and_add_bug
 
 from ui.components.csv_analytics_dialog import CSVAnalyticsDialog
+from ui.components.reset_mixin import ResetMixin
 
 
 # --- Worker Signals Class (Reused) ---
@@ -52,7 +53,7 @@ class ExistingMetricsWorker(QRunnable):
 
 
 # --- 4. Use Existing Metrics UI Tab ---
-class UseExistingMetricsSubTab(QWidget):
+class UseExistingMetricsSubTab(QWidget, ResetMixin):
     """
     UI Tab for using existing metrics CSV and merging bug labels.
     Corresponds to Tab Index 3.
@@ -142,7 +143,15 @@ class UseExistingMetricsSubTab(QWidget):
         self.label_btn = QPushButton("Run Labeling (Using Existing Metrics)")
         self.label_btn.setStyleSheet("background-color: #007ACC; color: white; font-weight: bold; padding: 10px;")
         self.label_btn.clicked.connect(self.start_labeling)
-        vbox.addWidget(self.label_btn)
+        
+        # Button layout for label and reset buttons
+        button_layout = QHBoxLayout()
+        button_layout.addWidget(self.label_btn)
+        
+        # Add reset button beside label button
+        self.setup_reset_button(button_layout)
+        
+        vbox.addLayout(button_layout)
         
         self.progress_bar = QProgressBar()
         self.progress_bar.setRange(0, 100)
@@ -244,6 +253,13 @@ class UseExistingMetricsSubTab(QWidget):
             w.setEnabled(enabled)
             
         self.label_btn.setEnabled(enabled)
+        
+        # Control reset button state
+        if enabled:
+            self.enable_reset_button()
+        else:
+            self.disable_reset_button()
+            
         if enabled:
             self.label_btn.setText("Run Labeling (Using Existing Metrics)")
             self.label_btn.setStyleSheet("background-color: #007ACC; color: white; font-weight: bold; padding: 10px;")
@@ -297,6 +313,28 @@ class UseExistingMetricsSubTab(QWidget):
         
         self.results_table.resizeColumnsToContents()
         self.scroll_area.setVisible(True)
+
+    def reset_to_defaults(self):
+        """Reset all parameters and input files to default values."""
+        # Clear input fields
+        self.existing_metrics_input.clear()
+        self.bug_report_input.clear()
+        self.bug_function_name_input.clear()
+        self.output_input.clear()
+        
+        # Reset progress bar
+        self.progress_bar.setValue(0)
+        
+        # Clear results
+        self.df_result = None
+        self.results_table.setRowCount(0)
+        self.results_table.setColumnCount(0)
+        
+        # Hide results area
+        self.scroll_area.setVisible(False)
+        
+        # Reset UI state
+        self.set_ui_state(True)
 
 # --- Example Execution Block (Optional, for testing) ---
 if __name__ == '__main__':

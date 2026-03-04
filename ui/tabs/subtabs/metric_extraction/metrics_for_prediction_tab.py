@@ -79,7 +79,7 @@ class MetricsExtractionSubTab(QWidget, ResetMixin):
         self.browse_output_btn = QPushButton("Browse Output")
         
         self.extract_btn = QPushButton("Extract Metrics and Save")
-        self.extract_btn.setStyleSheet("background-color: #4CAF50; color: white;")
+        self.extract_btn.setStyleSheet("background-color: #007ACC; color: white;")
         
         self.progress_bar = QProgressBar()
         self.progress_bar.setRange(0, 100)
@@ -153,7 +153,7 @@ class MetricsExtractionSubTab(QWidget, ResetMixin):
             
         if enabled:
             self.extract_btn.setText("Extract Metrics and Save")
-            self.extract_btn.setStyleSheet("background-color: #4CAF50; color: white;")
+            self.extract_btn.setStyleSheet("background-color: #007ACC; color: white;")
         else:
             self.extract_btn.setText("Processing...")
             self.extract_btn.setStyleSheet("background-color: #FFC107; color: black;")

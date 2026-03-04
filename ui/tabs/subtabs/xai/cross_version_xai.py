@@ -18,6 +18,7 @@ from core.xai_cvwp import cvwp_shap_multiple_csv
 
 # Import components
 from ui.components.csv_analytics_dialog import CSVAnalyticsDialog
+from ui.components.reset_mixin import ResetMixin
 
 # =========================================================================
 # === XAI WORKER FOR CROSS VERSION ========================================
@@ -85,7 +86,7 @@ class CrossVersionXAIWorker(QRunnable):
 # === UI FOR CROSS VERSION XAI ============================================
 # =========================================================================
 
-class CrossVersionXAI(QWidget):
+class CrossVersionXAI(QWidget, ResetMixin):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.threadpool = QThreadPool()
@@ -272,7 +273,15 @@ class CrossVersionXAI(QWidget):
         """)
         self.run_btn.clicked.connect(self.start_analysis)
         self.run_btn.setEnabled(False)
-        vbox.addWidget(self.run_btn)
+        
+        # Button layout for run and reset buttons
+        button_layout = QHBoxLayout()
+        button_layout.addWidget(self.run_btn)
+        
+        # Add reset button beside run button
+        self.setup_reset_button(button_layout)
+        
+        vbox.addLayout(button_layout)
 
         # --- F. Progress Bar ---
         self.progress_bar = QProgressBar()
@@ -576,6 +585,12 @@ class CrossVersionXAI(QWidget):
         for widget in self.param_widgets.values():
             widget.setEnabled(enabled)
         
+        # Control reset button state
+        if enabled:
+            self.enable_reset_button()
+        else:
+            self.disable_reset_button()
+        
         if enabled:
             self.run_btn.setText("Run Cross-Version XAI Analysis")
             self.run_btn.setEnabled(True)
@@ -764,3 +779,47 @@ class CrossVersionXAI(QWidget):
         else:
             QMessageBox.information(self, "SHAP Summary", 
                                    "SHAP summary data not available.")
+
+    def reset_to_defaults(self):
+        """Reset all parameters and input files to default values."""
+        # Clear file selections
+        self.current_train_files = []
+        self.current_test_files = []
+        self.train_files_input.clear()
+        self.test_files_input.clear()
+        self.train_list_widget.clear()
+        self.test_list_widget.clear()
+        
+        # Reset parameters to defaults
+        self.model_combo.setCurrentIndex(0)
+        self.shap_threshold_spin.setValue(0.01)
+        self.smote_checkbox.setChecked(True)
+        self.smote_random_spin.setValue(42)
+        
+        # Clear results
+        self.results = {
+            'metrics_df': None,
+            'features_df': None,
+            'shap_df': None
+        }
+        
+        # Clear tables
+        self.metrics_table.setRowCount(0)
+        self.metrics_table.setColumnCount(0)
+        self.features_table.setRowCount(0)
+        self.features_table.setColumnCount(0)
+        self.shap_table.setRowCount(0)
+        self.shap_table.setColumnCount(0)
+        
+        # Hide results group
+        self.results_group.setVisible(False)
+        
+        # Reset progress bar
+        self.progress_bar.setVisible(False)
+        self.progress_bar.setValue(0)
+        
+        # Update hyperparameters UI
+        self.update_hyperparams_ui()
+        
+        # Reset UI state
+        self.set_ui_state(True)

@@ -1,5 +1,4 @@
 import sys
-import os
 from pathlib import Path
 
 # Add project root to Python path (Ensures imports from 'ui.tabs' work)
@@ -28,19 +27,7 @@ class DefectPredictionUI(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Defect Prediction UI")
-        
-        # Get the directory of the current script
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        # Go up one level and find the icon
-        icon_path = os.path.normpath(os.path.join(current_dir, "..", "icon.png"))
-        if os.path.exists(icon_path):
-            self.setWindowIcon(QtGui.QIcon(icon_path))
-        else:
-            # Fallback to jpg if png doesn't exist
-            icon_path_jpg = os.path.normpath(os.path.join(current_dir, "..", "icon.jpg"))
-            if os.path.exists(icon_path_jpg):
-                self.setWindowIcon(QtGui.QIcon(icon_path_jpg))
-        
+        self.setWindowIcon(QtGui.QIcon('/home/lalith/drdl/defect_predictor_app/icon.jpg'))
         # Dynamic resizing and safety minimums
         screen = QApplication.primaryScreen().availableGeometry()
         width = int(screen.width() * 0.9)
@@ -70,7 +57,7 @@ class DefectPredictionUI(QMainWindow):
 
         self.setup_tabs()
 
-    # --- Menu Bar and Settings Methods ---
+    # --- Menu Bar and Settings Methods (UNCHANGED) ---
     def create_menu_bar(self):
         menu_bar = self.menuBar()
         settings_menu = menu_bar.addMenu("&Settings")

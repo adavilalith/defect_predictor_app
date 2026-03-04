@@ -6,6 +6,7 @@ from core.metrics_extractor import initialize_clang_library # Function for one-t
 from ui.tabs.subtabs.metric_extraction.metrics_for_prediction_tab import MetricsExtractionSubTab
 from ui.tabs.subtabs.metric_extraction.metrics_bug_label_tab import MetricsBugLabelSubTab
 from ui.tabs.subtabs.metric_extraction.existing_metrics_bug_tab import UseExistingMetricsSubTab
+from ui.tabs.subtabs.metric_extraction.graphbert_tab import GraphBERTSubTab
 from ui.components.reset_mixin import ResetMixin
 
 
@@ -13,11 +14,6 @@ from ui.components.reset_mixin import ResetMixin
 # These classes are temporary wrappers to allow the main tab structure to compile.
 # You will replace these with the actual implementation files later.
 
-class GraphBERTSubTab(QWidget):
-    def __init__(self):
-        super().__init__()
-        layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("UI for 'GraphBERT Based Feature Extraction' to be implemented here."))
 
 class CodeT5SubTab(QWidget):
     def __init__(self):

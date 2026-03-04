@@ -17,6 +17,7 @@ from core.xai_wvwp import wvwp_shap_single_csv
 
 # Import components
 from ui.components.csv_analytics_dialog import CSVAnalyticsDialog
+from ui.components.reset_mixin import ResetMixin
 # from ui.components.csv_viewer_dialog import CsvViewerDialog
 
 
@@ -88,7 +89,7 @@ class WithinVersionXAIWorker(QRunnable):
 # === UI FOR WITHIN VERSION XAI ===========================================
 # =========================================================================
 
-class WithinVersionXAI(QWidget):
+class WithinVersionXAI(QWidget, ResetMixin):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.threadpool = QThreadPool()
@@ -226,7 +227,15 @@ class WithinVersionXAI(QWidget):
             }
         """)
         self.run_btn.clicked.connect(self.start_analysis)
-        vbox.addWidget(self.run_btn)
+        
+        # Button layout for run and reset buttons
+        button_layout = QHBoxLayout()
+        button_layout.addWidget(self.run_btn)
+        
+        # Add reset button beside run button
+        self.setup_reset_button(button_layout)
+        
+        vbox.addLayout(button_layout)
 
         # --- E. Progress Bar ---
         self.progress_bar = QProgressBar()
@@ -403,6 +412,12 @@ class WithinVersionXAI(QWidget):
         # Enable/disable parameter widgets
         for widget in self.param_widgets.values():
             widget.setEnabled(enabled)
+        
+        # Control reset button state
+        if enabled:
+            self.enable_reset_button()
+        else:
+            self.disable_reset_button()
         
         if enabled:
             self.run_btn.setText("Run XAI Analysis")
@@ -696,3 +711,44 @@ class WithinVersionXAI(QWidget):
                 dialog.exec_()
             except Exception as e:
                 QMessageBox.critical(self, "View Error", f"Failed to load CSV: {str(e)}")
+
+    def reset_to_defaults(self):
+        """Reset all parameters and input files to default values."""
+        # Clear input fields
+        self.csv_input.clear()
+        self.current_csv_path = None
+        
+        # Reset parameters to defaults
+        self.train_split_spin.setValue(0.7)
+        self.model_combo.setCurrentIndex(0)
+        self.shap_threshold_spin.setValue(0.01)
+        self.smote_checkbox.setChecked(True)
+        self.smote_random_spin.setValue(42)
+        
+        # Clear results
+        self.results = {
+            'metrics_df': None,
+            'features_df': None,
+            'shap_df': None
+        }
+        
+        # Clear tables
+        self.metrics_table.setRowCount(0)
+        self.metrics_table.setColumnCount(0)
+        self.features_table.setRowCount(0)
+        self.features_table.setColumnCount(0)
+        self.shap_table.setRowCount(0)
+        self.shap_table.setColumnCount(0)
+        
+        # Hide results group
+        self.results_group.setVisible(False)
+        
+        # Reset progress bar
+        self.progress_bar.setVisible(False)
+        self.progress_bar.setValue(0)
+        
+        # Update hyperparameters UI
+        self.update_hyperparams_ui()
+        
+        # Reset UI state
+        self.set_ui_state(True)
